@@ -1,7 +1,7 @@
 const http = require('http');
 const path = require('path');
-const {createWriteStream, unlink} = require('fs');
-const {access} = require('fs/promises');
+const {createWriteStream} = require('fs');
+const {access, unlink} = require('fs/promises');
 
 const LimitSizeStream = require('./LimitSizeStream');
 const LimitExceededError = require('./LimitExceededError');
@@ -40,11 +40,17 @@ server.on('request', async (req, res) => {
         res.end();
       };
 
+      const removeFile = async () => {
+        try {
+          unlink(filepath);
+        } catch (e) {}
+      };
+
       req.pipe(limitSizeStream).pipe(writeStream);
 
       req.on('close', () => {
         if (req.readableAborted) {
-          unlink(filepath, () => {});
+          removeFile();
           req.unpipe();
           res.end();
         }
@@ -61,7 +67,7 @@ server.on('request', async (req, res) => {
 
       limitSizeStream.on('error', (error) => {
         if (error instanceof LimitExceededError) {
-          unlink(filepath, () => {});
+          removeFile();
           res.statusCode = 413;
           res.end();
           return;
