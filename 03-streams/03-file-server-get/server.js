@@ -1,11 +1,10 @@
 const http = require('http');
 const path = require('path');
-const {access} = require('node:fs/promises');
 const {createReadStream} = require('node:fs');
 
 const server = new http.Server();
 
-server.on('request', async (req, res) => {
+server.on('request', (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   const pathname = url.pathname.slice(1);
 
@@ -21,20 +20,16 @@ server.on('request', async (req, res) => {
         return;
       }
 
-      try {
-        await access(filepath);
-      } catch (error) {
-        res.statusCode = 404;
-        res.end();
-        return;
-      };
-
       const readStream = createReadStream(filepath);
 
       readStream.pipe(res);
 
-      readStream.on('error', () => {
-        res.statusCode = 500;
+      readStream.on('error', (error) => {
+        if (error.code === 'ENOENT') {
+          res.statusCode = 404;
+        } else {
+          res.statusCode = 500;
+        }
         res.end();
         return;
       });
