@@ -60,7 +60,6 @@ server.on('request', async (req, res) => {
       });
 
       limitSizeStream.on('error', (error) => {
-        console.log(error);
         if (error instanceof LimitExceededError) {
           unlink(filepath, () => {});
           res.statusCode = 413;
