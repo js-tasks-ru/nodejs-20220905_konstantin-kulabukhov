@@ -1,6 +1,56 @@
 module.exports = class Validator {
   constructor(rules) {
     this.rules = rules;
+
+    this.init();
+  }
+
+  init() {
+    if (!this.rules) {
+      throw new Error('Error: Отсутствуют правила для вылидации');
+    }
+
+    Object.entries(this.rules).forEach(([name, rule]) => {
+      const requiredRules = ['type', 'min', 'max'];
+      const allowedTypes = ['string', 'number'];
+      const sizeRules = ['min', 'max'];
+
+      if (!allowedTypes.includes(rule.type)) {
+        throw new Error(
+            `Field: ${name}; Error: Тип данных ${rule.type} не поддерживается`,
+        );
+      }
+
+      requiredRules.forEach((requiredRule) => {
+        if (requiredRule === undefined) {
+          throw new Error(
+              `Field: ${name}; Error: Отсутствует обязательное поле ${requiredRule}`,
+          );
+        }
+      });
+
+      if (rule.type === 'string') {
+        sizeRules.forEach((sizeRule) => {
+          const ruleValue = rule[sizeRule];
+
+          if (!Number.isInteger(ruleValue)) {
+            throw new Error(`Field: ${name}; Error: Поле ${sizeRule} должно быть целым числом`);
+          }
+
+          if (ruleValue < 0) {
+            throw new Error(
+                `Field: ${name}; Error: Поле ${sizeRule} должно быть положительным числом`,
+            );
+          }
+        });
+      }
+
+      if (rule.min > rule.max) {
+        throw new Error(
+            `Field: ${name}; Error: Минимальное значение не должно быть больше максимального`,
+        );
+      }
+    });
   }
 
   validate(obj) {
