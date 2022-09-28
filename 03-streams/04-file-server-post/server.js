@@ -42,7 +42,7 @@ server.on('request', async (req, res) => {
 
       const removeFile = async () => {
         try {
-          unlink(filepath);
+          await unlink(filepath);
         } catch (e) {}
       };
 
