@@ -20,6 +20,7 @@ const productSchema = new Schema({
   category: {
     type: ObjectId,
     required: true,
+    ref: 'Category',
   },
   subcategory: {
     type: ObjectId,
