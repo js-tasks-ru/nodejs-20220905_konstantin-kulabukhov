@@ -5,6 +5,7 @@ const Session = require('./models/Session');
 const {v4: uuid} = require('uuid');
 const handleMongooseValidationError = require('./libs/validationErrors');
 const mustBeAuthenticated = require('./libs/mustBeAuthenticated');
+const {getAuthToken} = require('./helpers/getAuthToken');
 const {login} = require('./controllers/login');
 const {oauth, oauthCallback} = require('./controllers/oauth');
 const {me} = require('./controllers/me');
@@ -33,6 +34,10 @@ app.use((ctx, next) => {
   ctx.login = async function(user) {
     const token = uuid();
 
+    const session = new Session({token, user, lastVisit: Date.now()});
+
+    await session.save();
+
     return token;
   };
 
@@ -45,6 +50,20 @@ router.use(async (ctx, next) => {
   const header = ctx.request.get('Authorization');
   if (!header) return next();
 
+  const token = getAuthToken(header);
+
+  const session = await Session.findOneAndUpdate(
+      {token},
+      {$set: {lastVisit: Date.now()}},
+      {runValidators: true}).populate('user');
+
+  if (!session) {
+    // eslint-disable-next-line no-throw-literal
+    throw ({status: 401, message: 'Неверный аутентификационный токен'});
+  }
+
+  ctx.user = session.user;
+
   return next();
 });
 
@@ -53,7 +72,7 @@ router.post('/login', login);
 router.get('/oauth/:provider', oauth);
 router.post('/oauth_callback', handleMongooseValidationError, oauthCallback);
 
-router.get('/me', me);
+router.get('/me', mustBeAuthenticated, me);
 
 app.use(router.routes());
 
